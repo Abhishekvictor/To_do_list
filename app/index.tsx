@@ -2,6 +2,8 @@ import { FlatList, Text, View, StyleSheet, Image, TouchableOpacity, TextInput, K
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons"
 import { Checkbox } from "expo-checkbox"
+import { useState } from "react";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type ToDoType = {
   id: number;
@@ -44,7 +46,36 @@ export default function Index() {
       isDone: false,
     },
   ];
+
+  const [todos, settodo] = useState<ToDoType[]>(todoData);
+  const [todotext, settodotext] = useState<string>('')
+
+  const addtodo = async ()=>{
+    const newtodo ={
+      id: Math.random(),
+      title:todotext,
+      isDone:false
+
+    }
+try{
+
+settodo([...todos, newtodo]);
+  await AsyncStorage.setItem("Mytodo", JSON.stringify(todos))
+  settodotext('');
+
+}catch(erro){
+  console.log(error)
+}
+  
+    // todos.push(newtodo)
+    // settodo(todos)
+    // settodotext('')
+  }
   return (
+
+    // header section
+
+    // Profile and menu bar
     <SafeAreaView
       style={styles.container}
     >
@@ -57,29 +88,20 @@ export default function Index() {
             style={{ width: 40, height: 40, borderRadius: 20 }}
           ></Image>
         </TouchableOpacity>
+
+        {/* search bar  */}
       </View>
       <View style={styles.searchbar}>
         <Ionicons name="search" size={20} color={'black'} ></Ionicons>
         <TextInput placeholder="Search" style={styles.searchInput} clearButtonMode="always"></TextInput>
       </View>
 
-      <FlatList data={todoData}
+      {/* list of todo task */}
+
+      <FlatList data={[...todos].reverse()}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-          <View style={styles.todoContainer}>
-            <View style={styles.todoinfoContainer}>
-
-              <Checkbox value={item.isDone} color={ item.isDone ? '#9083ed' : undefined }></Checkbox>
-              <Text style={[styles.todotext , item.isDone && {textDecorationLine:'line-through'} ]} >{item.title}</Text>
-
-            </View>
-
-            <TouchableOpacity onPress={() => (alert("Delete" + item.id))}>
-              <Ionicons name="trash" size={24} color={'black'}></Ionicons>
-
-            </TouchableOpacity>
-
-          </View>
+          <Todolist todo={item}></Todolist>
 
 
         )}
@@ -87,17 +109,42 @@ export default function Index() {
 
       {/* this is the footer  */}
 
+        {/* Adding new task button  */}
       <KeyboardAvoidingView style={styles.footer} behavior="padding" keyboardVerticalOffset={20}>
-        {/* Adding new task  */}
-        <TextInput placeholder="Add new Task" style={styles.newtodoInput}></TextInput>
-        <TouchableOpacity style={styles.addButton}>
-        <Ionicons name="add" size={26} color={'#333'}></Ionicons>
+        <TextInput placeholder="Add new Task" style={styles.newtodoInput} value={todotext} onChangeText={(text) => settodotext(text)} autoCorrect={false}></TextInput>
+       
+       {/* todo task name input field */}
+        <TouchableOpacity style={styles.addButton} onPress={()=>(addtodo())}>
+          <Ionicons name="add" size={26} color={'#333'}></Ionicons>
         </TouchableOpacity>
       </KeyboardAvoidingView>
 
     </SafeAreaView>
   );
 }
+
+// List of Todo item
+//   Component of todolist
+
+const Todolist = ({ todo }: { todo: ToDoType }) => (
+  <View style={styles.todoContainer}>
+    <View style={styles.todoinfoContainer}>
+
+      <Checkbox value={todo.isDone} color={todo.isDone ? '#9083ed' : undefined}></Checkbox>
+      <Text style={[styles.todotext, todo.isDone && { textDecorationLine: 'line-through' }]} >{todo.title}</Text>
+
+    </View>
+
+    <TouchableOpacity onPress={() => (alert("Delete" + todo.id))}>
+      <Ionicons name="trash" size={24} color={'black'}></Ionicons>
+
+    </TouchableOpacity>
+
+  </View>
+
+)
+
+
 
 const styles = StyleSheet.create({
   container: {
@@ -146,34 +193,34 @@ const styles = StyleSheet.create({
 
 
   },
-  todotext:{
-    fontSize:16,
-    color:'#333'
+  todotext: {
+    fontSize: 16,
+    color: '#333'
   },
-  footer:{
-    flexDirection:'row',
-    alignItems:'center',
-    justifyContent:'space-between'
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
 
   },
-  addButton:{
-    backgroundColor:'#dfdcf5',
-    borderRadius:20,
-    marginLeft:10,
-    
+  addButton: {
+    backgroundColor: '#dfdcf5',
+    borderRadius: 20,
+    marginLeft: 10,
+
 
 
   },
-  newtodoInput:{
-    backgroundColor:'#fff',
-    flex:1,
-    fontSize:16,
-    padding:16,
-    borderRadius:20,
-    shadowColor:'blue',
-    elevation:2
+  newtodoInput: {
+    backgroundColor: '#fff',
+    flex: 1,
+    fontSize: 16,
+    padding: 16,
+    borderRadius: 20,
+    shadowColor: 'blue',
+    elevation: 2
 
   }
-  
+
 
 })
