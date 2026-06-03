@@ -1,8 +1,8 @@
-import { FlatList, Text, View, StyleSheet, Image, TouchableOpacity, TextInput, KeyboardAvoidingView } from "react-native";
+import { FlatList, Text, View, StyleSheet, Image, TouchableOpacity, TextInput, KeyboardAvoidingView, Keyboard } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons"
 import { Checkbox } from "expo-checkbox"
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type ToDoType = {
@@ -47,30 +47,62 @@ export default function Index() {
     },
   ];
 
-  const [todos, settodo] = useState<ToDoType[]>(todoData);
-  const [todotext, settodotext] = useState<string>('')
+  const [todos, settodo] = useState<ToDoType[]>([]);
+  const [todotext, settodotext] = useState<string>("")
 
-  const addtodo = async ()=>{
-    const newtodo ={
-      id: Math.random(),
-      title:todotext,
-      isDone:false
+  useEffect(() => {
+    const getTodos = async () => {
+      try {
+        const todos = await AsyncStorage.getItem("Mytodo");
+        if (todos !== null) {
+          settodo(JSON.parse(todos))
+        }
+      } catch (error) {
+        console.log(error)
+      }
+    }
+    getTodos();
+  }, []);
+
+  const addtodo = async () => {
+    
+    try {
+
+      const newtodo = {
+      id: Date.now(),
+      title: todotext,
+      isDone: false
 
     }
-try{
 
-settodo([...todos, newtodo]);
-  await AsyncStorage.setItem("Mytodo", JSON.stringify(todos))
-  settodotext('');
+      settodo([...todos, newtodo]);
+      await AsyncStorage.setItem("Mytodo", JSON.stringify(todos))
+      settodotext('');
+      Keyboard.dismiss();
 
-}catch(erro){
-  console.log(error)
-}
-  
+    } catch (error) {
+      console.log(error)
+
+    }
+
     // todos.push(newtodo)
     // settodo(todos)
     // settodotext('')
+  };
+
+  const deleteTodo = async (id:number)=>{
+    try{
+      const newTodos = todos.filter((todo)=> todo.id !== id)
+      await AsyncStorage.setItem("Mytodo", JSON.stringify(newTodos))
+      settodo(newTodos)
+    }catch(error){
+   
+      console.log(error);
+    }
+
   }
+
+
   return (
 
     // header section
@@ -101,7 +133,7 @@ settodo([...todos, newtodo]);
       <FlatList data={[...todos].reverse()}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-          <Todolist todo={item}></Todolist>
+          <Todolist todo={item} deleteTodo={deleteTodo}></Todolist>
 
 
         )}
@@ -109,12 +141,12 @@ settodo([...todos, newtodo]);
 
       {/* this is the footer  */}
 
-        {/* Adding new task button  */}
+      {/* Adding new task button  */}
       <KeyboardAvoidingView style={styles.footer} behavior="padding" keyboardVerticalOffset={20}>
         <TextInput placeholder="Add new Task" style={styles.newtodoInput} value={todotext} onChangeText={(text) => settodotext(text)} autoCorrect={false}></TextInput>
-       
-       {/* todo task name input field */}
-        <TouchableOpacity style={styles.addButton} onPress={()=>(addtodo())}>
+
+        {/* todo task name input field */}
+        <TouchableOpacity style={styles.addButton} onPress={() => (addtodo())}>
           <Ionicons name="add" size={26} color={'#333'}></Ionicons>
         </TouchableOpacity>
       </KeyboardAvoidingView>
@@ -126,7 +158,7 @@ settodo([...todos, newtodo]);
 // List of Todo item
 //   Component of todolist
 
-const Todolist = ({ todo }: { todo: ToDoType }) => (
+const Todolist = ({ todo, deleteTodo }: { todo: ToDoType, deleteTodo:(id:number)=> void }) => (
   <View style={styles.todoContainer}>
     <View style={styles.todoinfoContainer}>
 
@@ -135,7 +167,9 @@ const Todolist = ({ todo }: { todo: ToDoType }) => (
 
     </View>
 
-    <TouchableOpacity onPress={() => (alert("Delete" + todo.id))}>
+    <TouchableOpacity onPress={() => {
+      deleteTodo(todo.id)
+      alert("Delete " + todo.title)}}>
       <Ionicons name="trash" size={24} color={'black'}></Ionicons>
 
     </TouchableOpacity>
