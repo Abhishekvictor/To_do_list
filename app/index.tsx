@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons"
 import { Checkbox } from "expo-checkbox"
 import { useEffect, useState } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { handleUrlParams } from "expo-router/build/fork/getStateFromPath-forks";
 
 type ToDoType = {
   id: number;
@@ -28,7 +29,7 @@ export default function Index() {
     {
       id: 3,
       title: "Todo 3",
-      isDone: true,
+      isDone: false,
     },
     {
       id: 4,
@@ -49,6 +50,9 @@ export default function Index() {
 
   const [todos, settodo] = useState<ToDoType[]>([]);
   const [todotext, settodotext] = useState<string>("")
+  const [searchQuery, setSearchQuery] = useState<string>('')
+  const [oldTodos, setOldTodos] = useState<ToDoType[]>([])
+
 
   useEffect(() => {
     const getTodos = async () => {
@@ -56,6 +60,7 @@ export default function Index() {
         const todos = await AsyncStorage.getItem("Mytodo");
         if (todos !== null) {
           settodo(JSON.parse(todos))
+          setOldTodos(JSON.parse(todos))
         }
       } catch (error) {
         console.log(error)
@@ -65,20 +70,22 @@ export default function Index() {
   }, []);
 
   const addtodo = async () => {
-    
+
     try {
 
       const newtodo = {
-      id: Date.now(),
-      title: todotext,
-      isDone: false
+        id: Date.now(),
+        title: todotext,
+        isDone: false
 
-    }
+      }
 
       settodo([...todos, newtodo]);
+      setOldTodos(todos)
       await AsyncStorage.setItem("Mytodo", JSON.stringify(todos))
       settodotext('');
       Keyboard.dismiss();
+
 
     } catch (error) {
       console.log(error)
@@ -90,17 +97,51 @@ export default function Index() {
     // settodotext('')
   };
 
-  const deleteTodo = async (id:number)=>{
-    try{
-      const newTodos = todos.filter((todo)=> todo.id !== id)
+  const deleteTodo = async (id: number) => {
+    try {
+      const newTodos = todos.filter((todo) => todo.id !== id)
       await AsyncStorage.setItem("Mytodo", JSON.stringify(newTodos))
       settodo(newTodos)
-    }catch(error){
-   
+      setOldTodos(newTodos)
+    } catch (error) {
+
       console.log(error);
     }
 
   }
+
+  const handleDone = async (id: number) => {
+    try {
+      // Map over your state variable "todos", not the hardcoded "todoData"
+      const newTodos = todos.map((todo) => {
+        if (todo.id === id) {
+          // Return a new object with the toggled state
+          return { ...todo, isDone: !todo.isDone };
+        }
+        return todo;
+      });
+
+      await AsyncStorage.setItem("Mytodo", JSON.stringify(newTodos));
+      settodo(newTodos); // Update state with the new list
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const onSearch = (query: string) => {
+    if(query==''){
+      settodo(oldTodos) 
+    }else{
+
+      const filteredTodos = todos.filter((todo) =>
+      todo.title.toLocaleLowerCase().includes(query.toLocaleLowerCase())
+      )
+      settodo(filteredTodos)
+    }
+  }
+  useEffect(()=>{
+    onSearch(searchQuery)
+  },[searchQuery])
 
 
   return (
@@ -125,7 +166,7 @@ export default function Index() {
       </View>
       <View style={styles.searchbar}>
         <Ionicons name="search" size={20} color={'black'} ></Ionicons>
-        <TextInput placeholder="Search" style={styles.searchInput} clearButtonMode="always"></TextInput>
+        <TextInput placeholder="Search" value={searchQuery} onChangeText={(text)=>setSearchQuery((text))} style={styles.searchInput} clearButtonMode="always"></TextInput>
       </View>
 
       {/* list of todo task */}
@@ -133,7 +174,7 @@ export default function Index() {
       <FlatList data={[...todos].reverse()}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-          <Todolist todo={item} deleteTodo={deleteTodo}></Todolist>
+          <Todolist todo={item} deleteTodo={deleteTodo} handleTodo={handleDone}></Todolist>
 
 
         )}
@@ -158,18 +199,25 @@ export default function Index() {
 // List of Todo item
 //   Component of todolist
 
-const Todolist = ({ todo, deleteTodo }: { todo: ToDoType, deleteTodo:(id:number)=> void }) => (
+const Todolist = ({ todo, deleteTodo, handleTodo }: {
+  todo: ToDoType,
+  deleteTodo: (id: number) => void,
+  handleTodo: (id: number) => void
+
+
+}) => (
   <View style={styles.todoContainer}>
     <View style={styles.todoinfoContainer}>
 
-      <Checkbox value={todo.isDone} color={todo.isDone ? '#9083ed' : undefined}></Checkbox>
+      <Checkbox value={todo.isDone} onValueChange={() => handleTodo(todo.id)} color={todo.isDone ? '#9083ed' : undefined}></Checkbox>
       <Text style={[styles.todotext, todo.isDone && { textDecorationLine: 'line-through' }]} >{todo.title}</Text>
 
     </View>
 
     <TouchableOpacity onPress={() => {
       deleteTodo(todo.id)
-      alert("Delete " + todo.title)}}>
+      alert("Delete " + todo.id)
+    }}>
       <Ionicons name="trash" size={24} color={'black'}></Ionicons>
 
     </TouchableOpacity>
